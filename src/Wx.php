@@ -26,8 +26,8 @@ class Wx
 		$this->config = $config;
 		$this->session = $session;
 
-      Log::info('app_id_key' . $this->config->get('wx.app_id_key'));
-      Log::info('app_secret_key' . $this->config->get('wx.app_secret_key'));
+      Log::info('app_id_key: ' . $this->config->get('wx.app_id_key'));
+      Log::info('app_secret_key: ' . $this->config->get('wx.app_secret_key'));
 	}
 
 
@@ -72,15 +72,17 @@ class Wx
                    '&secret=' . env(strval($this->config->get('wx.app_secret_key')));
 
          $ret = file_get_contents($reqUrl);
-         $obj = json_decode($ret);
-         if (0 == $obj->errcode){
-            $accessToken = $obj->access_token;
-            Redis::setex($accessTokenRedisKey, 7000, $accessToken);
+         Log::info($ret);
 
-            return [$obj->errcode, $accessToken];
+         $obj = json_decode($ret);
+         if (property_exists($obj, 'errcode')){
+            return [$obj->errcode, $obj->errmsg];
          }
 
-         return [$obj->errcode, $obj->errmsg];
+         $accessToken = $obj->access_token;
+         Redis::setex($accessTokenRedisKey, 7000, $accessToken);
+
+         return [ErrorCode::$OK, $accessToken];
       }  
 
       return [ErrorCode::$OK, $accessToken];

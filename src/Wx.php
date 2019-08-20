@@ -25,6 +25,9 @@ class Wx
 	public function __construct(Repository $config, SessionManager $session){
 		$this->config = $config;
 		$this->session = $session;
+
+      Log::info('app_id_key' . $this->config->get('wx.app_id_key'));
+      Log::info('app_secret_key' . $this->config->get('wx.app_secret_key'));
 	}
 
 

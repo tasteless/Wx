@@ -25,9 +25,6 @@ class Wx
 	public function __construct(Repository $config, SessionManager $session){
 		$this->config = $config;
 		$this->session = $session;
-
-      Log::info('app_id_key: ' . $this->config->get('wx.app_id_key'));
-      Log::info('app_secret_key: ' . $this->config->get('wx.app_secret_key'));
 	}
 
 
@@ -35,21 +32,19 @@ class Wx
 	* @param jscode
 	* @return [errcode, errmsg / object]
 	*/
-	public function jscodeToSession($jscode){
+	public function jscodeToSession($appId, $jscode){
       $reqUrl = 'https://api.weixin.qq.com/sns/jscode2session' . 
-                '?appid=' . env(strval($this->config->get('wx.app_id_key'))) . 
-                '&secret=' . env(strval($this->config->get('wx.app_secret_key'))) . 
+                '?appid=' . $appId . 
+                '&secret=' . strval($this->config->get('wx.' . $appId)) . 
                 '&js_code=' . $jscode . 
                 '&grant_type=authorization_code';
 
       $ret = file_get_contents($reqUrl);
 
-      Log::info($ret);
-
       //保存用户openid或session key
       $obj = json_decode($ret);
-      if (0 == $obj->errcode){
-         return [$obj->errcode, $obj];
+      if (!property_exists($obj, 'errcode')){
+         return [ErrorCode::$OK, $obj];
       }
       return [$obj->errcode, $obj->errmsg];
 	}
@@ -60,29 +55,30 @@ class Wx
    * @param void
    * @return [errcode, errmsg / access token]
    */
-   public function accessToken(){
-      $accessTokenRedisKey = env($this->config->get('wx.app_id_key')) . '_AccessToken';
+   public function accessToken($appId){
+      $accessTokenRedisKey = $appId . '_AccessToken';
 
       $accessToken = Redis::get($accessTokenRedisKey);
 
       //是否已经过期
       if (!$accessToken){
          $reqUrl = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential' . 
-                   '&appid=' . env(strval($this->config->get('wx.app_id_key'))) . 
-                   '&secret=' . env(strval($this->config->get('wx.app_secret_key')));
+                   '&appid=' . $appId . 
+                   '&secret=' . strval($this->config->get('wx.' . $appId));
 
          $ret = file_get_contents($reqUrl);
-         Log::info($ret);
 
+         Log::info($ret);
+   
          $obj = json_decode($ret);
-         if (property_exists($obj, 'errcode')){
-            return [$obj->errcode, $obj->errmsg];
+         if (!property_exists($obj, 'errcode')){
+            $accessToken = $obj->access_token;
+            Redis::setex($accessTokenRedisKey, 7000, $accessToken);
+
+            return [ErrorCode::$OK, $accessToken];
          }
 
-         $accessToken = $obj->access_token;
-         Redis::setex($accessTokenRedisKey, 7000, $accessToken);
-
-         return [ErrorCode::$OK, $accessToken];
+         return [$obj->errcode, $obj->errmsg];
       }  
 
       return [ErrorCode::$OK, $accessToken];
@@ -94,8 +90,8 @@ class Wx
    * @param encryptedData
    * @param iv
    */
-   public function decryptPhoneNumberData($openid, $sessionKey, $encryptedData, $iv){
-      $crypt = new WxBizDataCrypt($this->config->get('wx.app_id_key'), $sessionKey);
+   public function decryptPhoneNumberData($appId, $openid, $sessionKey, $encryptedData, $iv){
+      $crypt = new WxBizDataCrypt($appId, $sessionKey);
 
       $data = [];
       $ret = $crypt->decryptData($encryptedData, $iv, $data);
@@ -111,8 +107,8 @@ class Wx
    /**
    * 创建带参二维码
    */
-   public function createQrcode($param, $mediaService){
-      $reqUrl = 'https://api.weixin.qq.com/wxa/getwxacode?access_token=' . $this->accessToken();
+   public function createQrcode($appId, $param, $mediaService){
+      $reqUrl = 'https://api.weixin.qq.com/wxa/getwxacode?access_token=' . $this->accessToken($appId);
 
       $qrcodeImageData = CURL::instance()->post($reqUrl, json_encode([
          'path' => 'pages/index/index?from=' . $param
@@ -127,8 +123,8 @@ class Wx
    /**
    * 图片鉴黄
    */
-   public function imageCheck($filePath){
-      $accessToken = $this->accessToken();      
+   public function imageCheck($appId, $filePath){
+      $accessToken = $this->accessToken($appId);      
       if (ErrorCode::$OK != $accessToken[0]){
          return $accessToken[0];
       }
@@ -146,8 +142,8 @@ class Wx
    /**
    * 敏感词识别
    */
-   public function textCheck($keyword){
-      $accessToken = $this->accessToken();      
+   public function textCheck($appId, $keyword){
+      $accessToken = $this->accessToken($appId);      
       if (ErrorCode::$OK != $accessToken[0]){
          return $accessToken[0];
       }

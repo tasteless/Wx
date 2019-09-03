@@ -10,7 +10,7 @@ use Illuminate\Config\Repository;
 use Hujing\Wx\Classes\ErrorCode;
 use Hujing\Wx\Classes\WxBizDataCrypt;
 
-use UUID;
+use Webpatser\Uuid\Uuid;
 use Hujing\Wx\Lib\CURL;
 
 use Qcloud\Cos\Client as QcloudCOSClient;
@@ -177,7 +177,7 @@ class Wx
                ]
             ]);
       $result = false;
-      $fileName = UUID::generate()->string . '.' . $extension;
+      $fileName = Uuid::generate()->string . '.' . $extension;
       try { 
          $cosClient->putObject(array( 
               'Bucket' =>  $this->config->get('wx.bucket'),

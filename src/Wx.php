@@ -10,7 +10,10 @@ use Illuminate\Config\Repository;
 use Hujing\Wx\Classes\ErrorCode;
 use Hujing\Wx\Classes\WxBizDataCrypt;
 
+use UUID;
 use Hujing\Wx\Lib\CURL;
+
+use Qcloud\Cos\Client as QcloudCOSClient;
 
 class Wx
 {
@@ -33,6 +36,8 @@ class Wx
 	* @return [errcode, errmsg / object]
 	*/
 	public function jscodeToSession($appId, $jscode){
+      Log::info('app id: ' . $appId);
+      Log::info('app secret: ' . $this->config->get('wx.' . $appId));
       $reqUrl = 'https://api.weixin.qq.com/sns/jscode2session' . 
                 '?appid=' . $appId . 
                 '&secret=' . strval($this->config->get('wx.' . $appId)) . 
@@ -40,6 +45,7 @@ class Wx
                 '&grant_type=authorization_code';
 
       $ret = file_get_contents($reqUrl);
+      Log::info($ret);
 
       //保存用户openid或session key
       $obj = json_decode($ret);
@@ -156,5 +162,33 @@ class Wx
       }      
 
       return ErrorCode::$OK;
+   }
+
+   /**
+   * 上传照片到对象存储
+   */
+   public function uploadImage($filePath, $extension){
+      $cosClient = new QcloudCOSClient([
+              'region' => $this->config->get('wx.qcloud_cos_region'),
+              'credentials'=> [
+                  'appId' => $this->config->get('wx.qcloud_app_id'),
+                  'secretId'  => $this->config->get('wx.qcloud_secret_id'),
+                  'secretKey' => $this->config->get('wx.qcloud_secret_key')
+               ]
+            ]);
+      $result = false;
+      $fileName = UUID::generate()->string . '.' . $extension;
+      try { 
+         $cosClient->putObject(array( 
+              'Bucket' =>  $this->config->get('wx.bucket'),
+              'Key' => $fileName, 
+              'Body' => fopen($filePath, 'rb'), 
+          )); 
+         $result = true;
+      } catch (\Exception $e) { 
+         return [ErrorCode::$CallException, $e->getMessage()];          
+      }
+
+      return [ErrorCode::$OK, 'https://public-1257306603.cos.ap-shanghai.myqcloud.com/' . $fileName]; 
    }
 }

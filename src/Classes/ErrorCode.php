@@ -15,6 +15,8 @@ $ErrorCodeMessage = [
 	'-40009' => 'base64加密失败',
 	'-40010' => 'base64解密失败',
 	'-40011' => '生成xml失败',
+	'-40012' => '调用接口发生异常',
+	'-40044' => '内容非法',
 
 ];
 
@@ -52,6 +54,7 @@ class ErrorCode
 	public static $EncodeBase64Error = -40009;
 	public static $DecodeBase64Error = -40010;
 	public static $GenReturnXmlError = -40011;
+	public static $CallException = -40012;
 	static public $ContentIllegal = -40044;
 
 	/*

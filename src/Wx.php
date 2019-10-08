@@ -36,8 +36,6 @@ class Wx
 	* @return [errcode, errmsg / object]
 	*/
 	public function jscodeToSession($appId, $jscode){
-      Log::info('app id: ' . $appId);
-      Log::info('app secret: ' . $this->config->get('wx.' . $appId));
       $reqUrl = 'https://api.weixin.qq.com/sns/jscode2session' . 
                 '?appid=' . $appId . 
                 '&secret=' . strval($this->config->get('wx.' . $appId)) . 
@@ -73,8 +71,6 @@ class Wx
                    '&secret=' . strval($this->config->get('wx.' . $appId));
 
          $ret = file_get_contents($reqUrl);
-
-         Log::info($ret);
    
          $obj = json_decode($ret);
          if (!property_exists($obj, 'errcode')){
@@ -190,5 +186,41 @@ class Wx
       }
 
       return [ErrorCode::$OK, 'https://public-1257306603.cos.ap-shanghai.myqcloud.com/' . $fileName]; 
+   }
+
+   /**
+   * 发送模板消息
+   */
+   public function sendTemplateMessage($appId, $openid, $formId, $templateMessageId, $page, $data){
+      $tmData = [
+         'touser' => $openid,
+         'template_id' => $templateMessageId,
+         'page' => $page,
+         'form_id' => $formId,
+         'data' => []
+      ];
+
+      $keywordIndex = 1;
+      foreach ($data as $val) {
+         $tmData['data']['keyword' . $keywordIndex++] = [
+            'value' => $val
+         ];
+      }
+
+      $accessToken = $this->accessToken($appId);
+      if (ErrorCode::$OK != $accessToken[0]){
+         return $this->fail($accessToken[0], $accessToken[1]);
+      }
+      $ret = CURL::instance()->post('https://api.weixin.qq.com/cgi-bin/message/wxopen/template/send?access_token=' . $accessToken[1], json_encode($tmData));
+
+      Log::info($ret);
+      $obj = json_decode($ret);
+
+      //如果发送成功，则将form id失效
+      if ($obj->errcode == 0 || $obj->errcode == 41029 || $obj->errcode == 41028){
+         return [ErrorCode::$OK];
+      }
+
+      return [$obj->errcode, $obj->errmsg];
    }
 }

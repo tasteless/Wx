@@ -12,6 +12,7 @@ use Hujing\Wx\Classes\WxBizDataCrypt;
 
 use Webpatser\Uuid\Uuid;
 use Hujing\Wx\Lib\CURL;
+use CURLFile;
 
 use Qcloud\Cos\Client as QcloudCOSClient;
 
@@ -131,7 +132,7 @@ class Wx
          return $accessToken[0];
       }
 
-      $ret = CURL::instance()->post('https://api.weixin.qq.com/wxa/img_sec_check?access_token=' . $accessToken[1], ['media' => new CURLFile($imageFilePath)], ['content-type: multipart/form-data;']);
+      $ret = CURL::instance()->post('https://api.weixin.qq.com/wxa/img_sec_check?access_token=' . $accessToken[1], ['media' => new CURLFile($filePath)], ['content-type: multipart/form-data;']);
       Log::info('鉴黄结果:' . $ret);
       $retObj = json_decode($ret);
       if (87014 == $retObj->errcode){

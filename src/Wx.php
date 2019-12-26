@@ -199,7 +199,7 @@ class Wx
          'touser' => $openid,
          'template_id' => $templateMessageId,
          'page' => $page,
-         'data' => []
+         'data' => $data
       ];
 
       $accessToken = $this->accessToken($appId);

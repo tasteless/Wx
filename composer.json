@@ -12,7 +12,6 @@
     "homepage": "https://github.com/hujing/wx",
     "keywords": ["Laravel", "Wx"],
     "require": {
-        "illuminate/support": "~5",
         "qcloud/cos-sdk-v5": ">=1.0",
         "webpatser/laravel-uuid": "^3.0"
     },

@@ -112,14 +112,14 @@ class Wx
    /**
    * 创建带参二维码
    */
-   public function createQrcode($appId, $param, $mediaService){
+   public function createQrcode($appId, $param){
       $reqUrl = 'https://api.weixin.qq.com/wxa/getwxacode?access_token=' . $this->accessToken($appId);
 
       $qrcodeImageData = CURL::instance()->post($reqUrl, json_encode([
          'path' => 'pages/index/index?from=' . $param
       ]));
 
-      $qrcodeFilePath = '/tmp/' . Uuid::generate(). '.png';
+      $qrcodeFilePath = '/tmp/' . $param . '.png';
       file_put_contents($qrcodeFilePath, $qrcodeImageData);
 
       return $qrcodeFilePath;
